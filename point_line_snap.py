@@ -1,3 +1,9 @@
+"""
+Used as reference for snapping coordinate to line:
+https://medium.com/@brendan_ward/how-to-leverage-geopandas-for-faster-snapping-of-points-to-lines-6113c94e59aa
+"""
+
+
 import pandas as pd
 import numpy as np
 import geopandas as gpd
