@@ -1,0 +1,97 @@
+---
+title: "Ordinal Logistic Regression"
+author: "Emily Yamauchi"
+date: "7/28/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rms)
+```
+
+## Bike Index Seattle  
+### Ordinal Logistic Regression
+
+```{r}
+
+# Load data
+
+df = read.csv('data/crashes.csv')
+n <- ncol(df)
+factor_cols <- c(5:n-1)
+
+for(i in factor_cols){
+  df[,i] <- as.factor(df[,i])
+}
+
+df$severity <- as.ordered(df$severity)
+
+str(df)
+
+```
+
+
+```{r}
+
+# Split train/test data
+
+train_size = 0.8 * nrow(df)
+set.seed(1234)
+ix = sample(seq_len(nrow(df)), size=train_size)
+train = df[ix,]
+test = df[-ix,]
+
+
+```
+
+```{r}
+
+# Develop model
+
+full_m <- orm(severity ~ ., data = train)
+full_m
+
+```
+
+
+```{r}
+
+# Helper function to get variable Chi Sq 
+
+order_anv <- function(m){
+  # return ordered anova table without total
+  anv <- as.data.frame(anova(m), test = 'Chisq')
+  anv <- anv[!row.names(anv)=='TOTAL',] # keep just the variables
+  return(anv[order(anv$P, decreasing = TRUE),])
+}
+
+order_anv(full_m)
+
+```
+
+```{r}
+
+# Helper function to drop variables and refit model
+
+refit_model <- function(ci, m){
+  anv <- order_anv(m)
+  max_p <- max(anv$P)
+  drop_vars <- NULL
+  while(max_p > ci){
+    drop_var <- row.names(anv[1,]) # largest p value
+    drop_vars <- append(drop_vars, drop_var)
+    temp_vars <- all_vars[!all_vars %in% drop_vars]
+    form_x <- paste(temp_vars, collapse = "+")
+    form <- as.formula(paste("severity~", form_x))
+    m_temp <- orm(form, data = train)
+    #print(drop_vars)
+    anv <- order_anv(m_temp)
+    max_p <- max(anv$P)
+  }
+  return(m_temp)
+}
+
+
+refit_model(0.1, full_m) # 90% confidence interval
+```
